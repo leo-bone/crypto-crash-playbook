@@ -1,5 +1,7 @@
 # crypto-crash-playbook
 
+[简体中文](README.md) | English
+
 A reusable WorkBuddy skill that turns any extreme crypto / high-beta risk-asset shock into (1) a verified causal-chain post-mortem and (2) a directly executable risk-control SOP.
 
 Core stance: **don't predict direction, prepare instead** — the value lies in leverage discipline + exchange-infrastructure-risk hedging, not in directional calls.
