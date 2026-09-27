@@ -10,7 +10,7 @@
 | 4 | 稳定币交易所净流入 | DefiLlama / Artemis | https://defillama.com/ | 稳定币净流向 CEX（抄底弹药） | 日/周 |
 | 5 | 单巨鲸大额开仓 | Lookonchain | https://x.com/lookonchain | 追踪 >$500M 异动、预置空单 | 实时推送 |
 | 6 | 政策关键词 | 新闻 / Truth Social | — | 关税 / 利率 / 监管 关键词 | 事件驱动 |
-| 7 | 交易所 ADL / 宕机 | 各所状态页 | Binance / Bybit / OKX status | ADL 触发 / outage 公告 | 实时 |
+| 7 | 交易所 ADL / 宕机 | 各所状态页 | 你所用交易所的官方 status 页面 | ADL 触发 / outage 公告 | 实时 |
 | 8 | 现货 ETF 流量 | Farside | https://farside.co.uk/btc/ | BTC / ETH ETF 日净流入（机构真金白银） | 日 |
 | 9 | 链上鲸鱼 / 持仓 | Arkham | https://arkhamintelligence.com/ | 鲸鱼地址异动、交易所净流量 | 实时 |
 
