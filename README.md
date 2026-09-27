@@ -1,5 +1,7 @@
 # crypto-crash-playbook
 
+简体中文 | [English](README_EN.md)
+
 一个可复用的 WorkBuddy Skill：把**任何一次极端加密资产 / 高Beta风险资产冲击**，转化为
 (1) 经过事实核查的因果链复盘，与 (2) 可直接执行的交易风控 SOP。
 
