@@ -10,6 +10,19 @@ agent_created: true
 
 Turn any extreme crypto / risk-asset shock into (1) a verified causal-chain post-mortem and (2) a directly executable trading strategy SOP. The skill does NOT predict direction; its value is converting "what just happened" into "what to do before / during / after the next shock" — centered on leverage discipline and exchange-infrastructure-risk hedging.
 
+## Quick Reference (TL;DR)
+
+**Hard rules (never break):**
+1. Zero naked leverage in known catalyst windows (≤2x or flat 72h before; none over weekends/holidays).
+2. Per-event account risk ≤1–2%; total leverage ≤5x.
+3. Hard stop-loss always; account drawdown -15% → flat everything (circuit breaker).
+4. Collateral off-exchange, spread across ≥2 venues.
+5. Limit orders only under stress; never all-in on dips (scale in 1/3 tranches).
+
+**Event playbook:** T-72h de-lever & move collateral → first 30–60min stay still (no market orders, avoid ADL/phantom-pricing window) → enter only when F&G extreme + stablecoin inflow + reversal signal coincide → aftershock weeks: do not assume V-bottom.
+
+**Health check:** ETF flows positive + BTC reclaims key levels + altseason broadens + sentiment normalizes = bull returns; BTC-only strength + ETF outflows = relief bounce, not a new leg.
+
 ## When To Use
 
 - A major crypto crash, flash crash, record liquidation event, or macro/geopolitical headline (tariffs, rate decisions, regulation) triggers a cascade.
