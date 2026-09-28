@@ -74,7 +74,10 @@ When the user wants the analysis "optimized / pushed forward / made executable a
 - §card Printable discipline card (print-optimized, @media print isolates it)
 All checkboxes persist via `localStorage` (single key). Add a "print / export PDF" and "reset" button. This is the primary deliverable for execution; the deeper `<event>_technical_factors.html` remains the appendix for mechanics.
 
-### Step 9 — Deliver & make reusable
+### Step 9 — Ship the companion monitoring tool (when the user wants a live dashboard)
+When the user wants the dashboard to be *live* rather than a paper checklist, ship `tools/rwa_yield_radar.html` (included in this skill): a self-contained, keyless browser page that fetches DefiLlama Yields + Stablecoins and Alternative.me F&G APIs client-side (all allow CORS `*`). It provides: an RWA yield-spread table (tokenized treasuries / private credit / gold, multi-chain TVL aggregated, APY max), a spread-signal engine (>+1.5% carry window open / 0–1.5% thin / inverted = no leverage), an editable T-bill baseline (localStorage), stablecoin market-cap panel, F&G tied to the >75 de-risk / ≤25 bottom-fishing thresholds from the warning dashboard, and a daily snapshot history with an SVG spread-compression trend chart (export/import JSON). Use it as the template whenever the user asks to "接实时数据 / 做成活仪表盘" for any indicator set: pick free CORS-enabled APIs, aggregate client-side, persist snapshots in localStorage, render with inline SVG.
+
+### Step 10 — Deliver & make reusable
 Use `present_files` to preview the HTML(s). For repeating workflows, the user may ask to turn the analysis into a skill (this skill itself is the template).
 
 ## Key Principles
@@ -92,6 +95,6 @@ Self-contained HTML deliverables (light professional theme, tables, SVG diagrams
 2. `<event>_technical_factors.html` (appendix, when the user needs mechanics explained): per-factor 是什么/怎么炸的/意味着什么/该怎么做 + analogies + SVG diagrams + factor→discipline table + two-phase timeline + printable glossary.
 3. `<event>_discipline_card.html` (optional): A4 print/PDF-ready one-pager for sticking on screen.
 
-The skill repo also ships `README.md` (install + usage) and `references/data_sources.md` (live feed mapping for every dashboard indicator) so the SOP is executable end-to-end.
+The skill repo also ships `README.md` (install + usage), `references/data_sources.md` (live feed mapping for every dashboard indicator), and `tools/rwa_yield_radar.html` (a working live spread-radar implementing Step 9 — open in any browser, no backend, no API key).
 
 Interactive checklists (localStorage-persisted) are preferred for reusability.
