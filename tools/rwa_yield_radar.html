@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RWA 利差雷达 · Yield Spread Radar</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1a2233; --muted:#5b6472; --line:#e3e7ee;
+    --blue:#2563eb; --green:#059669; --red:#dc2626; --amber:#d97706; --soft:#eef2f8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding:20px;}
+  .wrap{max-width:1150px;margin:0 auto;}
+  h1{font-size:24px;} h1 span{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px;}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 18px;padding:12px 16px;background:var(--card);border:1px solid var(--line);border-radius:10px;}
+  .bar button{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13.5px;cursor:pointer;}
+  .bar button.ghost{background:var(--soft);color:var(--ink);}
+  .status{font-size:12.5px;color:var(--muted);}
+  .baseline{font-size:13.5px;display:flex;align-items:center;gap:6px;}
+  .baseline input{width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;text-align:right;}
+  h2{font-size:17px;margin:26px 0 10px;padding-left:10px;border-left:4px solid var(--blue);}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  th{background:var(--soft);text-align:right;padding:8px 10px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  td{padding:7px 10px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;}
+  tr:hover td{background:#f4f7fc;}
+  .pos{color:var(--green);font-weight:600;} .neg{color:var(--red);font-weight:600;}
+  .cat{display:inline-block;font-size:11px;padding:1px 8px;border-radius:9px;background:var(--soft);color:#3b4a63;margin-right:4px;}
+  .cat-t{background:#dbeafe;color:#1e40af;} .cat-c{background:#fef3c7;color:#92400e;}
+  .cat-g{background:#dcfce7;color:#166534;} .cat-x{background:#f3e8ff;color:#6b21a8;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .kpi .v{font-size:22px;font-weight:700;} .kpi .l{font-size:12px;color:var(--muted);}
+  .signal{padding:10px 14px;border-radius:8px;margin:8px 0;font-size:13.5px;border-left:4px solid;}
+  .s-ok{background:#f0fdf4;border-color:var(--green);} .s-warn{background:#fffbeb;border-color:var(--amber);} .s-bad{background:#fef2f2;border-color:var(--red);}
+  .muted{color:var(--muted);font-size:12px;}
+  .foot{margin-top:26px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);padding-top:10px;}
+  .share{position:relative;height:16px;background:var(--soft);border-radius:8px;overflow:hidden;min-width:90px;}
+  .share i{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#3b82f6,#2563eb);}
+  .share b{position:absolute;right:6px;top:0;font-size:10.5px;line-height:16px;}
+  input[type=checkbox]{transform:scale(1.1);}
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap;}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px;}
+  .hist-tools{display:flex;gap:8px;margin:8px 0;}
+  .hist-tools button{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:5px 12px;font-size:12.5px;cursor:pointer;color:var(--ink);}
+  .hist-tools button:hover{background:#e2e8f2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>RWA 利差雷达<span>Yield Spread Radar — 实时数据 · 免费公开 API · 无需密钥</span></h1>
+
+  <div class="bar">
+    <button onclick="refreshAll(true)">⟳ 立即刷新</button>
+    <label class="status"><input type="checkbox" id="autoRef" onchange="toggleAuto()"> 每 10 分钟自动刷新</label>
+    <span class="status" id="status">加载中…</span>
+    <span style="flex:1"></span>
+    <label class="baseline">美债基准利率 %
+      <input type="number" id="baseline" step="0.05" min="0" max="10" value="4.00" onchange="saveBaseline()">
+      <span class="muted">（可按美联储最新利率自行修改）</span>
+    </label>
+  </div>
+
+  <!-- 利差历史 -->
+  <h2>利差历史曲线 <span class="muted">（每次打开/刷新自动记录当日快照到本机 localStorage；观察信贷利差的压缩/扩张趋势）</span></h2>
+  <div class="chartbox">
+    <div class="hist-tools">
+      <button onclick="exportHist()">⬇ 导出历史 JSON</button>
+      <button onclick="document.getElementById('impFile').click()">⬆ 导入 JSON</button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importHist(this)">
+      <button onclick="clearHist()">清空历史</button>
+      <span class="status" id="histStatus"></span>
+    </div>
+    <div id="chart"></div>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>最高信贷利差 %（vs 基准）</span>
+      <span><i style="background:var(--amber)"></i>国债类平均利差 %</span>
+      <span><i style="background:#9ca3af"></i>零轴</span>
+    </div>
+  </div>
+
+  <!-- KPI 区 -->
+  <div class="cards" id="kpis"></div>
+
+  <!-- 信号区 -->
+  <h2>信号提示</h2>
+  <div id="signals"><div class="signal s-warn">计算中…</div></div>
+
+  <!-- 利差表 -->
+  <h2>RWA 收益率 vs 基准利差表 <span class="muted">（点击表头排序；TVL 为多链聚合，APY 取链上最高）</span></h2>
+  <table id="spreadTable">
+    <thead><tr>
+      <th onclick="sortBy('sym')">资产</th><th onclick="sortBy('cat')">类别</th><th onclick="sortBy('proj')">发行方/协议</th>
+      <th onclick="sortBy('apy')">APY %</th><th onclick="sortBy('tvl')">TVL $</th><th onclick="sortBy('spr')">利差 vs 基准</th><th onclick="sortBy('chains')">链数</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <!-- 稳定币 -->
+  <h2>稳定币大盘 <span class="muted">（DefiLlama 实时）</span></h2>
+  <table>
+    <thead><tr><th style="text-align:left">稳定币</th><th>流通量 $</th><th>市占</th></tr></thead>
+    <tbody id="stbTbody"></tbody>
+  </table>
+
+  <div class="foot">
+    数据源：DefiLlama Yields API（yields.llama.fi）· DefiLlama Stablecoins API · Alternative.me Fear &amp; Greed。利差 = APY − 基准利率；基准默认 4.00%，请按最新美债利率修改（保存在本地）。<br>
+    资产识别基于代币符号匹配（syrup/USDe 等信贷与合成类 + BUIDL/USDY/OUSG/USTB/USYC/BENJI/JAAA 等国债/MMF 类 + PAXG/XAUT 黄金类），可能漏掉长尾产品，不构成完整清单。表中 USDC/USDT/USDS 等出现在「信贷」类表示该稳定币存入对应信贷协议（Maple/Centrifuge）的池子收益。<br>
+    本页为研究与监控工具，不构成投资建议；套息策略有智能合约/清算/脱锚风险，请先读你的 10.10 风控铁律再动手。
+  </div>
+</div>
+
+<script>
+const KW = [
+  {sym:['USYC'], cat:'国债', proj:'Circle'},
+  {sym:['USDY','OUSG'], cat:'国债', proj:'Ondo'},
+  {sym:['BUIDL'], cat:'国债', proj:'BlackRock'},
+  {sym:['USTB'], cat:'国债', proj:'Invesco'},
+  {sym:['BENJI'], cat:'国债', proj:'Franklin'},
+  {sym:['JAAA'], cat:'国债', proj:'Janus Henderson'},
+  {sym:['SYRUPUSDC','SYRUPUSDT','SYRUPUSDG','SYRUP','M-SYRUP'], cat:'信贷', proj:'Maple'},
+  {sym:['USCC'], cat:'信贷', proj:'Bitwise'},
+  {sym:['ACRED'], cat:'信贷', proj:'Securitize'},
+  {sym:['PAXG','XAUT'], cat:'黄金', proj:'—'},
+  {sym:['USDtb'], cat:'综合', proj:'Ethena'},
+];
+const CATCLS = {'国债':'cat-t','信贷':'cat-c','黄金':'cat-g','综合':'cat-x'};
+
+let pools=[], sortKey='tvl', sortAsc=false, timer=null;
+
+function saveBaseline(){ localStorage.setItem('rwa_baseline', document.getElementById('baseline').value); renderTable(); renderSignals(); }
+function loadBaseline(){ const v = localStorage.getItem('rwa_baseline'); if(v) document.getElementById('baseline').value = v; }
+function baseVal(){ return parseFloat(document.getElementById('baseline').value)||4.0; }
+
+function toggleAuto(){
+  if(document.getElementById('autoRef').checked){
+    timer = setInterval(()=>refreshAll(false), 10*60*1000);
+  } else if(timer){ clearInterval(timer); timer=null; }
+}
+
+async function jget(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(url+' → HTTP '+r.status);
+  return r.json();
+}
+
+function classify(symbol, project){
+  const s = (symbol||'').toUpperCase();
+  for(const k of KW){ if(k.sym.some(x=>s.includes(x.toUpperCase()))) return k; }
+  // 长尾启发式：项目名含 treas/credit/rwa
+  const p = (project||'').toLowerCase();
+  if(p.includes('treasur')||p.includes('usyc')||p.includes('bond')) return {cat:'国债',proj:project||'—'};
+  if(p.includes('credit')||p.includes('maple')||p.includes('centrifuge')||p.includes('goldfinch')) return {cat:'信贷',proj:project||'—'};
+  return null;
+}
+
+async function refreshAll(manual){
+  const st = document.getElementById('status');
+  st.textContent = '拉取数据中…';
+  try{
+    const [yld, stb, fng] = await Promise.all([
+      jget('https://yields.llama.fi/pools'),
+      jget('https://stablecoins.llama.fi/stablecoins?includePrices=false'),
+      jget('https://api.alternative.me/fng/?limit=1')
+    ]);
+    // --- RWA 池聚合 ---
+    const agg = {};
+    for(const p of yld.data){
+      const info = classify(p.symbol, p.project);
+      if(!info) continue;
+      if((p.tvlUsd||0) < 5e6) continue; // 过滤 <$5M 长尾噪音
+      const key = (p.symbol||'').toUpperCase();
+      if(!agg[key]) agg[key] = {sym:key, cat:info.cat, proj:info.proj, apy:0, tvl:0, chains:new Set(), stable:true};
+      agg[key].tvl += p.tvlUsd||0;
+      agg[key].apy = Math.max(agg[key].apy, p.apy||0);
+      agg[key].chains.add(p.chain);
+      if(!p.stablecoin) agg[key].stable = false;
+    }
+    pools = Object.values(agg);
+    renderKPIs(stb, fng);
+    renderTable();
+    renderStable(stb);
+    renderSignals();
+    snapshot(stb, fng);
+    const t = new Date().toLocaleTimeString('zh-CN');
+    st.textContent = '✓ 已更新 '+t+'（利差表 '+pools.length+' 个资产）';
+  }catch(e){
+    st.textContent = '✗ 拉取失败：'+e.message+'（网络或 CORS 问题，稍后重试）';
+    if(manual) alert('数据拉取失败：'+e.message);
+  }
+}
+
+function fmt$(v){
+  if(v>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
+  if(v>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
+  return '$'+Math.round(v);
+}
+
+function renderKPIs(stb, fng){
+  const tot = stb.peggedAssets.reduce((a,x)=>a+(x.circulating?.peggedUSD||0),0);
+  const fv = fng.data[0].value, fcls = fng.data[0].value_classification;
+  const fCol = fv>=75?'var(--red)': fv>=55?'var(--amber)': fv<=25?'var(--blue)':'var(--green)';
+  const rwaTvl = pools.reduce((a,p)=>a+p.tvl,0);
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="v">${fmt$(tot)}</div><div class="l">稳定币总市值（DefiLlama 实时）</div></div>
+    <div class="kpi"><div class="v">${fmt$(rwaTvl)}</div><div class="l">雷达覆盖 RWA TVL（TVL≥$5M）</div></div>
+    <div class="kpi"><div class="v" style="color:${fCol}">${fv} · ${fcls}</div><div class="l">恐惧与贪婪指数（Alternative.me）</div></div>
+    <div class="kpi"><div class="v">${baseVal().toFixed(2)}%</div><div class="l">基准利率（本地设置）</div></div>`;
+}
+
+function spreadOf(p){ return (p.apy||0) - baseVal(); }
+function sprHtml(p){
+  const s = spreadOf(p);
+  const cls = s>0.5?'pos': s<-0.5?'neg':'';
+  const note = s>1.5?' ⚡':'';
+  return `<span class="${cls}">${s>=0?'+':''}${s.toFixed(2)}%${note}</span>`;
+}
+
+function renderTable(){
+  const rows = [...pools].sort((a,b)=>{
+    let va, vb;
+    if(sortKey==='sym'){va=a.sym;vb=b.sym;return sortAsc?va.localeCompare(vb):vb.localeCompare(va);}
+    if(sortKey==='cat'){va=a.cat;vb=b.cat;return sortAsc?va.localeCompare(vb):vb.localeCompare(va);}
+    if(sortKey==='proj'){va=a.proj;vb=b.proj;return sortAsc?va.localeCompare(vb):vb.localeCompare(va);}
+    if(sortKey==='chains'){va=a.chains.size;vb=b.chains.size;}
+    else if(sortKey==='spr'){va=spreadOf(a);vb=spreadOf(b);}
+    else {va=a[sortKey]||0;vb=b[sortKey]||0;}
+    return sortAsc?va-vb:vb-va;
+  });
+  document.getElementById('tbody').innerHTML = rows.map(p=>`
+    <tr>
+      <td><b>${p.sym}</b></td>
+      <td><span class="cat ${CATCLS[p.cat]||''}">${p.cat}</span></td>
+      <td class="muted">${p.proj}</td>
+      <td>${(p.apy||0).toFixed(2)}</td>
+      <td>${fmt$(p.tvl)}</td>
+      <td>${sprHtml(p)}</td>
+      <td class="muted">${p.chains.size}</td>
+    </tr>`).join('');
+}
+
+function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else {sortKey=k; sortAsc=false;} renderTable(); }
+
+function renderStable(stb){
+  const tot = stb.peggedAssets.reduce((a,x)=>a+(x.circulating?.peggedUSD||0),0);
+  const top = [...stb.peggedAssets].sort((a,b)=>(b.circulating?.peggedUSD||0)-(a.circulating?.peggedUSD||0)).slice(0,8);
+  document.getElementById('stbTbody').innerHTML = top.map(x=>{
+    const v = x.circulating?.peggedUSD||0, pct = (v/tot*100);
+    return `<tr><td><b>${x.symbol}</b></td><td>${fmt$(v)}</td>
+      <td><div class="share"><i style="width:${pct}%"></i><b>${pct.toFixed(1)}%</b></div></td></tr>`;
+  }).join('');
+}
+
+function renderSignals(){
+  const sig = [];
+  const credit = pools.filter(p=>p.cat==='信贷' && p.apy>0);
+  const treas  = pools.filter(p=>p.cat==='国债' && p.apy>0);
+  const b = baseVal();
+  if(credit.length){
+    const best = credit.reduce((a,x)=>x.apy>a.apy?x:a);
+    const spr = best.apy - b;
+    sig.push(spr > 1.5
+      ? `<div class="signal s-ok"><b>套息窗口开启：</b>最高信贷资产 ${best.sym} APY ${best.apy.toFixed(2)}%，高于基准 <b>+${spr.toFixed(2)}%</b> —— 抵押-借入利差可观（注意智能合约与清算风险，仓位纪律照 10.10 手册）。</div>`
+      : spr > 0
+        ? `<div class="signal s-warn"><b>利差偏薄：</b>最高信贷 ${best.sym} 仅 +${spr.toFixed(2)}%，扣除 gas/滑点后性价比低，建议观望或降杠杆。</div>`
+        : `<div class="signal s-bad"><b>利差倒挂：</b>信贷收益已低于基准 ${spr.toFixed(2)}% —— 资金拥挤，绝不加杠杆追。</div>`);
+  }
+  if(treas.length){
+    const avg = treas.reduce((a,x)=>a+x.apy,0)/treas.length;
+    sig.push(`<div class="signal s-ok"><b>国债类基线：</b>${treas.length} 个国债/MMF 资产，平均 APY ${avg.toFixed(2)}%（基准 ${b.toFixed(2)}%）。链上国债收益≈无风险锚，利差雷达以此作对照组。</div>`);
+  }
+  const fvEl = document.querySelector('.kpi .v[style]');
+  if(fvEl){
+    const fv = parseInt(fvEl.textContent);
+    if(fv>=75) sig.push(`<div class="signal s-bad"><b>情绪过热（F&amp;G ${fv}）：</b>贪婪区间 &gt;75 是你预警仪表盘的降风险触发线——检查仓位，勿在此区间加杠杆。</div>`);
+    else if(fv<=25) sig.push(`<div class="signal s-ok"><b>恐惧极值（F&amp;G ${fv}）：</b>结合稳定币流入与反转信号，是分批抄底的候选窗口（确认三信号同现再动手）。</div>`);
+  }
+  document.getElementById('signals').innerHTML = sig.join('') || '<div class="signal s-warn">暂无信号。</div>';
+}
+
+/* ---------- 历史快照 ---------- */
+function loadSnaps(){
+  try{ return JSON.parse(localStorage.getItem('rwa_snaps')||'[]'); }catch(e){ return []; }
+}
+function saveSnaps(s){ localStorage.setItem('rwa_snaps', JSON.stringify(s)); }
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function snapshot(stb, fng){
+  const credit = pools.filter(p=>p.cat==='信贷' && p.apy>0);
+  const treas  = pools.filter(p=>p.cat==='国债' && p.apy>0);
+  if(!credit.length || !treas.length) return;
+  const best = credit.reduce((a,x)=>x.apy>a.apy?x:a);
+  const snap = {
+    date: todayKey(),
+    ts: Date.now(),
+    creditSpr: +(best.apy - baseVal()).toFixed(3),
+    creditSym: best.sym,
+    creditApy: +best.apy.toFixed(3),
+    treasSpr: +((treas.reduce((a,x)=>a+x.apy,0)/treas.length) - baseVal()).toFixed(3),
+    stableTot: stb.peggedAssets.reduce((a,x)=>a+(x.circulating?.peggedUSD||0),0),
+    fng: parseInt(fng.data[0].value)||null
+  };
+  const snaps = loadSnaps();
+  const i = snaps.findIndex(s=>s.date===snap.date);
+  if(i>=0) snaps[i] = snap; else snaps.push(snap);
+  while(snaps.length>365) snaps.shift();
+  saveSnaps(snaps);
+  renderChart();
+}
+function renderChart(){
+  const snaps = loadSnaps();
+  const el = document.getElementById('chart');
+  const hs = document.getElementById('histStatus');
+  if(snaps.length<2){
+    hs.textContent = snaps.length===0 ? '尚无快照，雷达每次刷新会自动记录当日快照。'
+      : '已有 1 个快照，明天起形成趋势。';
+    el.innerHTML = '<div class="muted" style="padding:20px 0;text-align:center">快照积累中…（至少 2 天后显示曲线）</div>';
+    return;
+  }
+  hs.textContent = '共 '+snaps.length+' 天快照（'+snaps[0].date+' ~ '+snaps[snaps.length-1].date+'）';
+  const W = 1040, H = 240, P = {l:52, r:16, t:14, b:26};
+  const vals = snaps.flatMap(s=>[s.creditSpr, s.treasSpr, 0]);
+  let mn = Math.min(...vals), mx = Math.max(...vals);
+  const pad = Math.max(0.3, (mx-mn)*0.12); mn -= pad; mx += pad;
+  const X = i => P.l + (W-P.l-P.r) * (snaps.length===1?0.5:i/(snaps.length-1));
+  const Y = v => P.t + (H-P.t-P.b) * (1-(v-mn)/(mx-mn));
+  const path = key => snaps.map((s,i)=>(i?'L':'M')+X(i).toFixed(1)+','+Y(s[key]).toFixed(1)).join(' ');
+  const zeroY = Y(0);
+  // x 轴刻度：最多 8 个
+  const step = Math.max(1, Math.ceil(snaps.length/8));
+  let ticks = '';
+  for(let i=0;i<snaps.length;i+=step){
+    ticks += `<text x="${X(i)}" y="${H-6}" font-size="10" fill="#5b6472" text-anchor="middle">${snaps[i].date.slice(5)}</text>`;
+  }
+  // y 轴刻度 5 档
+  let yticks = '';
+  for(let k=0;k<=4;k++){
+    const v = mn + (mx-mn)*k/4;
+    yticks += `<text x="${P.l-6}" y="${Y(v)+3}" font-size="10" fill="#5b6472" text-anchor="end">${v.toFixed(1)}</text>
+      <line x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}" stroke="#eef1f6" />`;
+  }
+  const last = snaps[snaps.length-1];
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+    ${yticks}
+    <line x1="${P.l}" y1="${zeroY}" x2="${W-P.r}" y2="${zeroY}" stroke="#9ca3af" stroke-dasharray="4 3"/>
+    <path d="${path('treasSpr')}" fill="none" stroke="var(--amber)" stroke-width="2"/>
+    <path d="${path('creditSpr')}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+    <circle cx="${X(snaps.length-1)}" cy="${Y(last.creditSpr)}" r="4" fill="var(--blue)"/>
+    <text x="${X(snaps.length-1)-6}" y="${Y(last.creditSpr)-8}" font-size="11" fill="var(--blue)" text-anchor="end" font-weight="600">${last.creditSpr>=0?'+':''}${last.creditSpr.toFixed(2)}% ${last.creditSym}</text>
+    ${ticks}
+  </svg>`;
+}
+function exportHist(){
+  const blob = new Blob([JSON.stringify(loadSnaps(),null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rwa_yield_history_'+todayKey()+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importHist(input){
+  const f = input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = e=>{
+    try{
+      const arr = JSON.parse(e.target.result);
+      if(!Array.isArray(arr)) throw new Error('格式不对');
+      const cur = loadSnaps();
+      const map = {};
+      cur.forEach(s=>map[s.date]=s);
+      arr.forEach(s=>{ if(s.date && typeof s.creditSpr==='number') map[s.date]=s; });
+      const merged = Object.values(map).sort((a,b)=>a.date<b.date?-1:1);
+      saveSnaps(merged); renderChart();
+      alert('已合并 '+merged.length+' 天快照。');
+    }catch(err){ alert('导入失败：'+err.message); }
+  };
+  rd.readAsText(f);
+  input.value = '';
+}
+function clearHist(){
+  if(confirm('确定清空全部本地利差历史？（建议先导出备份）')){
+    saveSnaps([]); renderChart();
+  }
+}
+
+loadBaseline();
+refreshAll(true).then(()=>{ /* snapshot 已在 refreshAll 内触发 */ });
+</script>
+</body>
+</html>
