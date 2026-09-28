@@ -12,9 +12,10 @@ Core stance: **don't predict direction, prepare instead** — the value lies in 
 
 | File | Purpose |
 |---|---|
-| `SKILL.md` | Workflow (9 steps): fact-check → causal chain → P&L → on-chain signals → technical factors → master console → delivery |
+| `SKILL.md` | Workflow (10 steps): fact-check → causal chain → P&L → on-chain signals → technical factors → master console → companion live dashboard → delivery |
 | `references/technical_factors.md` | Verified definitions (ADL, oracle / phantom pricing, funding rate, stablecoin de-peg, cross-exchange contagion) + 2025-10-10 case specifics |
 | `references/data_sources.md` | Live data-source mapping for every warning-dashboard indicator |
+| `tools/rwa_yield_radar.html` | **Companion live tool**: RWA yield-spread radar — browser-only, keyless (DefiLlama + Alternative.me APIs), real-time spread table + carry-signal lights + stablecoin panel + F&G alert tie-in + spread-history trend chart (local snapshots, JSON export) |
 | `crypto-crash-playbook.zip` | Packaged skill for one-click install |
 
 ## Install
